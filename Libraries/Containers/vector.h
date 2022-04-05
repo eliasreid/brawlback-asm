@@ -200,6 +200,7 @@ vector<T>::vector(size_t size, const T &val) {
     for(int i = 0; i < size; i++) {
         Array[i] = val;
     }
+    length = size;
 }
 
 template<class T>
