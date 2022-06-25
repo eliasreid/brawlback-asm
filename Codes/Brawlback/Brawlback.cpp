@@ -221,9 +221,10 @@ namespace Match {
     SIMPLE_INJECTION(startSceneMelee, 0x806d176c, "addi	sp, sp, 112") {
         _OSDisableInterrupts();
         OSReport("  ~~~~~~~~~~~~~~~~  Start Scene Melee  ~~~~~~~~~~~~~~~~  \n");
-        #ifdef NETPLAY_IMPL
-        //Netplay::StartMatching(); // now moved to GmGlobalModeMelee.cpp
+
         Netplay::SetIsInMatch(true);
+        #ifdef NETPLAY_IMPL
+        
         #else
         // 'debug' values
         Netplay::getGameSettings().localPlayerIdx = 0;
@@ -237,9 +238,10 @@ namespace Match {
     SIMPLE_INJECTION(exitSceneMelee, 0x806d4844, "li r4, 0x0") {
         _OSDisableInterrupts();
         OSReport("  ~~~~~~~~~~~~~~~~  Exit Scene Melee  ~~~~~~~~~~~~~~~~  \n");
+
+        Netplay::SetIsInMatch(false);
         #ifdef NETPLAY_IMPL
         Netplay::EndMatch();
-        Netplay::SetIsInMatch(false);
         #endif
         _OSEnableInterrupts();
     }
@@ -327,7 +329,13 @@ namespace FrameAdvance {
     SIMPLE_INJECTION(updateIpSwitchPreProcess, 0x8004aa2c, "addi r29, r31, 0x8") {
         _OSDisableInterrupts();
         if (Netplay::IsInMatch()) {
+            #ifdef NETPLAY_IMPL
             ProcessGameSimulationFrame(&currentFrameData);
+            #else
+            u32 gameLogicFrame = getCurrentFrame();
+            Util::SaveState(gameLogicFrame);
+            #endif
+            
         }
         _OSEnableInterrupts();
     }
@@ -406,6 +414,7 @@ namespace FrameLogic {
     void BeginFrame() {
 
         u32 currentFrame = getCurrentFrame();
+
         // this is the start of all our logic for each frame. Because EXI writes/reads are synchronous,
         // you can think of the control flow going like this
         // this function -> write data to emulator through exi -> emulator processes data and possibly queues up data
@@ -416,6 +425,8 @@ namespace FrameLogic {
             // reset flag to be used later
             FrameAdvance::isRollback = false;
             // just resimulated/stalled/skipped/whatever, reset to normal
+
+            //sets framesToAdvance to 1
             FrameAdvance::ResetFrameAdvance();
 
             OSReport("------ Frame %u ------\n", currentFrame);
